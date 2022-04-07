@@ -1,0 +1,13 @@
+function plot_env(env)
+fprintf("Plotting environment: %s\n", env.env_name);
+figure
+hold on
+for i = 1:length(env.obstacles)
+    o = env.obstacles(i);
+    x = o.pts(:,1);
+    y = o.pts(:,2);
+   fill(x,y,'k', 'DisplayName',o.name)
+end
+
+for 
+end
