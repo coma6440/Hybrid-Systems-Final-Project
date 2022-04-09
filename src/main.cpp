@@ -92,6 +92,7 @@ void loadEnv(JSON j, std::vector<Polygon>& obstacles, std::vector<Polygon>& regi
     for (auto& e : j["obstacles"])
         {
         size_t n = e["pts"].size();
+        std::cout << "Loading obstacle with " << n << " points" << std::endl;
         Polygon poly(n);
         for (int i = 0; i < n; ++i)
             {
