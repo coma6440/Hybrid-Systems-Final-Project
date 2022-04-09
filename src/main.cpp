@@ -61,7 +61,7 @@ namespace oc = ompl::control;
 
 using Polygon = oc::PropositionalTriangularDecomposition::Polygon;
 using Vertex = oc::PropositionalTriangularDecomposition::Vertex;
-using json = nlohmann::json;
+using JSON = nlohmann::json;
 
 // a decomposition is only needed for SyclopRRT and SyclopEST
 // use TriangularDecomp
@@ -87,7 +87,7 @@ class MyDecomposition : public oc::PropositionalTriangularDecomposition
             }
     };
 
-void loadEnv(json j, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
+void loadEnv(JSON j, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
     {
     for (auto& e : j["obstacles"])
         {
@@ -179,8 +179,12 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     SO2.enforceBounds(so2out);
     }
 
-void plan(std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
+void plan(JSON env_json)
     {
+    // Load the environment
+    std::vector<Polygon> obstacles;
+    std::vector<Polygon> regions;
+    loadEnv(env_json, obstacles, regions);
     // construct the state space we are planning in
     auto space(std::make_shared<ob::SE2StateSpace>());
 
@@ -289,14 +293,11 @@ int main(int argc, char** argv)
         file.open(argv[1]);
         if (file.is_open())
             {
-            json j;
+            JSON j;
             file >> j;
             file.close();
             std::cout << "Opened environment: " << j["env_name"] << std::endl;
-            std::vector<Polygon> obs;
-            std::vector<Polygon> reg;
-            loadEnv(j, obs, reg);
-            plan(obs, reg);
+            plan(j);
             }
         }
     else
