@@ -1,0 +1,11 @@
+function plot_sol(env_file, sol_file)
+fname = env_file;
+fid = fopen(fname, 'r');
+raw = fread(fid);
+str = char(raw');
+fclose(fid);
+env = jsondecode(str);
+path = load(sol_file);
+plot_env(env)
+plot(path)
+end

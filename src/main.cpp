@@ -34,13 +34,17 @@
 
  /* Author: Matt Maly */
 
+/* Standard Libraries */
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+/* OMPL Libraries */
 #include <ompl/control/SpaceInformation.h>
 #include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/SimpleSetup.h>
 #include <ompl/config.h>
-#include <iostream>
-#include <vector>
 
 #include <ompl/extensions/triangle/PropositionalTriangularDecomposition.h>
 #include <ompl/control/planners/ltl/PropositionalDecomposition.h>
@@ -49,6 +53,7 @@
 #include <ompl/control/planners/ltl/LTLPlanner.h>
 #include <ompl/control/planners/ltl/LTLProblemDefinition.h>
 
+/* Additional Libraries */
 #include <json.hpp>
 
 namespace ob = ompl::base;
@@ -56,12 +61,13 @@ namespace oc = ompl::control;
 
 using Polygon = oc::PropositionalTriangularDecomposition::Polygon;
 using Vertex = oc::PropositionalTriangularDecomposition::Vertex;
+using json = nlohmann::json;
 
 // a decomposition is only needed for SyclopRRT and SyclopEST
 // use TriangularDecomp
 class MyDecomposition : public oc::PropositionalTriangularDecomposition
     {
-    public:
+        public:
         MyDecomposition(const ob::RealVectorBounds& bounds)
             : oc::PropositionalTriangularDecomposition(bounds) {}
         ~MyDecomposition() override = default;
@@ -81,35 +87,46 @@ class MyDecomposition : public oc::PropositionalTriangularDecomposition
             }
     };
 
-void addObstaclesAndPropositions(std::shared_ptr<oc::PropositionalTriangularDecomposition>& decomp)
+void loadEnv(json j, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
     {
-    Polygon obstacle(4);
-    obstacle.pts[0] = Vertex(0., .9);
-    obstacle.pts[1] = Vertex(1.1, .9);
-    obstacle.pts[2] = Vertex(1.1, 1.1);
-    obstacle.pts[3] = Vertex(0., 1.1);
-    decomp->addHole(obstacle);
+    for (auto& e : j["obstacles"])
+        {
+        size_t n = e["pts"].size();
+        Polygon poly(n);
+        for (int i = 0; i < n; ++i)
+            {
+            float x = e["pts"][i][0];
+            float y = e["pts"][i][1];
+            poly.pts[i] = Vertex(x, y);
+            }
+        obstacles.push_back(poly);
+        }
+    for (auto& e : j["regions"])
+        {
+        size_t n = e["pts"].size();
+        Polygon poly(n);
+        for (int i = 0; i < n; ++i)
+            {
+            float x = e["pts"][i][0];
+            float y = e["pts"][i][1];
+            poly.pts[i] = Vertex(x, y);
+            }
+        regions.push_back(poly);
+        }
+    std::cout << "Loaded " << obstacles.size() << " obstacles and " << regions.size() << " regions" << std::endl;
+    }
 
-    Polygon p0(4);
-    p0.pts[0] = Vertex(.9, .3);
-    p0.pts[1] = Vertex(1.1, .3);
-    p0.pts[2] = Vertex(1.1, .5);
-    p0.pts[3] = Vertex(.9, .5);
-    decomp->addProposition(p0);
+void addObstaclesAndPropositions(std::shared_ptr<oc::PropositionalTriangularDecomposition>& decomp, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
+    {
+    for (auto o : obstacles)
+        {
+        decomp->addHole(o);
+        }
 
-    Polygon p1(4);
-    p1.pts[0] = Vertex(1.5, 1.6);
-    p1.pts[1] = Vertex(1.6, 1.6);
-    p1.pts[2] = Vertex(1.6, 1.7);
-    p1.pts[3] = Vertex(1.5, 1.7);
-    decomp->addProposition(p1);
-
-    Polygon p2(4);
-    p2.pts[0] = Vertex(.2, 1.7);
-    p2.pts[1] = Vertex(.3, 1.7);
-    p2.pts[2] = Vertex(.3, 1.8);
-    p2.pts[3] = Vertex(.2, 1.8);
-    decomp->addProposition(p2);
+    for (auto r : regions)
+        {
+        decomp->addProposition(r);
+        }
     }
 
 /* Returns whether a point (x,y) is within a given polygon.
@@ -162,7 +179,7 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     SO2.enforceBounds(so2out);
     }
 
-void plan()
+void plan(std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
     {
     // construct the state space we are planning in
     auto space(std::make_shared<ob::SE2StateSpace>());
@@ -177,7 +194,7 @@ void plan()
     // create triangulation that ignores obstacle and respects propositions
     std::shared_ptr<oc::PropositionalTriangularDecomposition> ptd = std::make_shared<MyDecomposition>(bounds);
     // helper method that adds an obstacle, as well as three propositions p0,p1,p2
-    addObstaclesAndPropositions(ptd);
+    addObstaclesAndPropositions(ptd, obstacles, regions);
     ptd->setup();
 
     // create a control space
@@ -263,8 +280,29 @@ void plan()
         std::cout << "No solution found" << std::endl;
     }
 
-int main(int /*argc*/, char** /*argv*/)
+int main(int argc, char** argv)
     {
-    plan();
+    if (argc == 2)
+        {
+        std::ifstream file;
+        // First argument is environment file
+        file.open(argv[1]);
+        if (file.is_open())
+            {
+            json j;
+            file >> j;
+            file.close();
+            std::cout << "Opened environment: " << j["env_name"] << std::endl;
+            std::vector<Polygon> obs;
+            std::vector<Polygon> reg;
+            loadEnv(j, obs, reg);
+            plan(obs, reg);
+            }
+        }
+    else
+        {
+        std::cout << "Need to pass environment file" << std::endl;
+        }
+    // plan();
     return 0;
     }
