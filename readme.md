@@ -9,3 +9,10 @@
 
 - OMPL: https://ompl.kavrakilab.org/installation.html
     - Follow instructions on web
+
+
+## Project Objectives
+- Implement LTL planner with SPOT
+- Adapt environment for convex polygons
+- Implement custom dynamics model
+- Benchmark performance for various test cases
