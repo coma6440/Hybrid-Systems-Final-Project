@@ -141,27 +141,34 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     // const auto* se2 = start->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
     // const auto* vel = start->as<ob::CompoundState>()->as<ob::RealVectorStateSpace::StateType>(1);
     const auto* rctrl = control->as<oc::RealVectorControlSpace::ControlType>();
-
-    double x = start->as<ob::RealVectorStateSpace::StateType>()->values[0];
-    double y = start->as<ob::RealVectorStateSpace::StateType>()->values[1];
-    double vx = start->as<ob::RealVectorStateSpace::StateType>()->values[2];
-    double vy = start->as<ob::RealVectorStateSpace::StateType>()->values[3];
+    const auto* s = static_cast<const ompl::base::RealVectorStateSpace::StateType*>(start);
+    double x = (*s)[0];
+    double y = (*s)[1];
+    double vx = (*s)[2];
+    double vy = (*s)[3];
+    double u1 = rctrl->values[0];
+    double u2 = rctrl->values[1];
+    double t = duration;
 
     // double xout = se2->getX() + rctrl->values[0] * duration * cos(se2->getYaw());
     // double yout = se2->getY() + rctrl->values[0] * duration * sin(se2->getYaw());
     // double yawout = se2->getYaw() + rctrl->values[1];
-    double xout = x + duration * vx;
-    double yout = y + duration * vy;
-    // TODO: Finish this
+    double xout = x + vx * t + (u1 * t * t) / 2;
+    double yout = y + vy * t + (u2 * t * t) / 2;
+    double vxout = vx + u1 * t;
+    double vyout = vy + u2 * t;
 
+    result->as<ob::RealVectorStateSpace::StateType>()->values[0] = xout;
+    result->as<ob::RealVectorStateSpace::StateType>()->values[1] = yout;
+    result->as<ob::RealVectorStateSpace::StateType>()->values[2] = vxout;
+    result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
+    // auto* se2out = result->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
+    // se2out->setXY(xout, yout);
+    // // se2out->setYaw(yawout);
 
-    auto* se2out = result->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
-    se2out->setXY(xout, yout);
-    // se2out->setYaw(yawout);
-
-    auto* so2out = se2out->as<ob::SO2StateSpace::StateType>(1);
-    ob::SO2StateSpace SO2;
-    SO2.enforceBounds(so2out);
+    // auto* so2out = se2out->as<ob::SO2StateSpace::StateType>(1);
+    // ob::SO2StateSpace SO2;
+    // SO2.enforceBounds(so2out);
     }
 
 void plan(JSON env_json)
