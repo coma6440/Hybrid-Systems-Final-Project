@@ -39,10 +39,6 @@ class MyDecomposition : public oc::PropositionalTriangularDecomposition
         void project(const ob::State* s, std::vector<double>& coord) const override
             {
             coord.resize(2);
-            // coord[0] = s->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0)->getX();
-            // coord[1] = s->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0)->getY();
-            // coord[0] = s->as<ob::SE2StateSpace::StateType>()->getX();
-            // coord[1] = s->as<ob::SE2StateSpace::StateType>()->getY();
             coord[0] = s->as<ob::RealVectorStateSpace::StateType>()->values[0];
             coord[1] = s->as<ob::RealVectorStateSpace::StateType>()->values[1];
             }
@@ -50,8 +46,6 @@ class MyDecomposition : public oc::PropositionalTriangularDecomposition
         void sampleFullState(const ob::StateSamplerPtr& sampler, const std::vector<double>& coord, ob::State* s) const override
             {
             sampler->sampleUniform(s);
-            // auto* ws = s->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
-            // ws->setXY(coord[0], coord[1]);
             s->as<ob::RealVectorStateSpace::StateType>()->values[0] = coord[0];
             s->as<ob::RealVectorStateSpace::StateType>()->values[1] = coord[1];
             }
@@ -105,9 +99,49 @@ void addObstaclesAndPropositions(std::shared_ptr<oc::PropositionalTriangularDeco
    in counter-clockwise order, beginning with the bottom-left vertex. */
 bool polyContains(const Polygon& poly, double x, double y)
     {
-    // TODO: Adapt this to be convex polygons
-    return x >= poly.pts[0].x && x <= poly.pts[2].x
-        && y >= poly.pts[0].y && y <= poly.pts[2].y;
+    // Adapted from https://stackoverflow.com/questions/1119627/how-to-test-if-a-point-is-inside-of-a-convex-polygon-in-2d-integer-coordinates
+    const size_t n = poly.pts.size();
+    assert(n > 2); // Ensure that we are testing a polygon and not a line or point
+
+    unsigned int pos = 0;
+    unsigned int neg = 0;
+
+    for (int i = 0; i < n; i++)
+        {
+        float x1 = poly.pts[i].x;
+        float y1 = poly.pts[i].y;
+        // Test if test point is a vertex of the polygon
+        if ((x1 == x) && (y1 == y))
+            {
+            return true;
+            }
+
+        //And the i+1'th, or if i is the last, with the first point
+        float i2 = (i + 1) % n;
+
+        float x2 = poly.pts[i2].x;
+        float y2 = poly.pts[i2].y;
+
+        //Compute the cross product
+        float d = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+
+        if (d > 0)
+            {
+            pos++;
+            }
+        if (d < 0)
+            {
+            neg++;
+            }
+
+        //If the sign changes, then point is outside
+        if (pos > 0 && neg > 0)
+            {
+            return false;
+            }
+        }
+    //If no change in direction, then on same side of all segments, and thus inside
+    return true;
     }
 
 /* Our state validity checker queries the decomposition for its obstacles,
@@ -119,12 +153,12 @@ bool isStateValid(
     const ob::State* state)
     {
     if (!si->satisfiesBounds(state))
+        {
         return false;
-    // const auto* se2 = state->as<ob::SE2StateSpace::StateType>();
-    // const auto* se2 = state->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
+        }
 
-    double x = state->as<ob::RealVectorStateSpace::StateType>()->values[0];
-    double y = state->as<ob::RealVectorStateSpace::StateType>()->values[1];
+    const double x = state->as<ob::RealVectorStateSpace::StateType>()->values[0];
+    const double y = state->as<ob::RealVectorStateSpace::StateType>()->values[1];
     const std::vector<Polygon>& obstacles = decomp->getHoles();
     for (const auto& obstacle : obstacles)
         {
@@ -136,39 +170,29 @@ bool isStateValid(
 
 void propagate(const ob::State* start, const oc::Control* control, const double duration, ob::State* result)
     {
-    // TODO: Adapt this for custom dynamics
-    // const auto* se2 = start->as<ob::SE2StateSpace::StateType>();
-    // const auto* se2 = start->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
-    // const auto* vel = start->as<ob::CompoundState>()->as<ob::RealVectorStateSpace::StateType>(1);
-    const auto* rctrl = control->as<oc::RealVectorControlSpace::ControlType>();
-    const auto* s = static_cast<const ompl::base::RealVectorStateSpace::StateType*>(start);
-    double x = (*s)[0];
-    double y = (*s)[1];
-    double vx = (*s)[2];
-    double vy = (*s)[3];
-    double u1 = rctrl->values[0];
-    double u2 = rctrl->values[1];
-    double t = duration;
+    const auto* ctrl = control->as<oc::RealVectorControlSpace::ControlType>();
+    const auto* s = start->as<ob::RealVectorStateSpace::StateType>();
 
-    // double xout = se2->getX() + rctrl->values[0] * duration * cos(se2->getYaw());
-    // double yout = se2->getY() + rctrl->values[0] * duration * sin(se2->getYaw());
-    // double yawout = se2->getYaw() + rctrl->values[1];
+    // Split out the state and control variables
+    const double x = s->values[0];
+    const double y = s->values[1];
+    const double vx = s->values[2];
+    const double vy = s->values[3];
+    const double u1 = ctrl->values[0];
+    const double u2 = ctrl->values[1];
+    const double t = duration;
+
+    // Solved ODE Equations
     double xout = x + vx * t + (u1 * t * t) / 2;
     double yout = y + vy * t + (u2 * t * t) / 2;
     double vxout = vx + u1 * t;
     double vyout = vy + u2 * t;
 
+    // Save the results
     result->as<ob::RealVectorStateSpace::StateType>()->values[0] = xout;
     result->as<ob::RealVectorStateSpace::StateType>()->values[1] = yout;
     result->as<ob::RealVectorStateSpace::StateType>()->values[2] = vxout;
     result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
-    // auto* se2out = result->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0);
-    // se2out->setXY(xout, yout);
-    // // se2out->setYaw(yawout);
-
-    // auto* so2out = se2out->as<ob::SO2StateSpace::StateType>(1);
-    // ob::SO2StateSpace SO2;
-    // SO2.enforceBounds(so2out);
     }
 
 void plan(JSON env_json)
@@ -177,41 +201,34 @@ void plan(JSON env_json)
     std::vector<Polygon> obstacles;
     std::vector<Polygon> regions;
     loadEnv(env_json, obstacles, regions);
-    // construct the state space we are planning in
-    // auto space(std::make_shared<ob::SE2StateSpace>());
 
-    // auto se2(std::make_shared<ob::SE2StateSpace>());
-    // auto r2(std::make_shared<ob::RealVectorStateSpace>(2));
+    // construct the state space we are planning in
     auto space(std::make_shared<ob::RealVectorStateSpace>(4));
 
-    // set the bounds for the R^2 part of SE(2)
-    // ob::RealVectorBounds bounds(2);
-    // bounds.setLow(0);
-    // bounds.setHigh(2);
-    // // set the bounds for the velocity portion of the state space
-    // ob::RealVectorBounds velBounds(2);
-    // velBounds.setLow(-1);
-    // velBounds.setHigh(1);
-
-    // se2->setBounds(bounds);
-    // r2->setBounds(velBounds);
-
+    // set the bounds for the state space
     ob::RealVectorBounds bounds(4);
-    bounds.setLow(0, 0);
-    bounds.setLow(1, 0);
-    bounds.setLow(2, -1);
-    bounds.setLow(3, -1);
-    bounds.setHigh(0, 2);
-    bounds.setHigh(1, 2);
-    bounds.setHigh(2, 1);
-    bounds.setHigh(3, 1);
+    // Lower Bounds
+    bounds.setLow(0, 0);  // x 
+    bounds.setLow(1, 0);  // y
+    bounds.setLow(2, -1); // vx
+    bounds.setLow(3, -1); // vy
+    // Upper Bounds
+    bounds.setHigh(0, 2); // x
+    bounds.setHigh(1, 2); // y
+    bounds.setHigh(2, 1); // vx
+    bounds.setHigh(3, 1); // vy
 
     space->setBounds(bounds);
 
-    // auto space = se2 + r2;
+    // Copy over the R^2 bounds for decomposition
+    ob::RealVectorBounds decompBounds(2);
+    decompBounds.setLow(0, bounds.low[0]);
+    decompBounds.setLow(1, bounds.low[1]);
+    decompBounds.setHigh(0, bounds.high[0]);
+    decompBounds.setHigh(1, bounds.high[1]);
 
     // create triangulation that ignores obstacle and respects propositions
-    std::shared_ptr<oc::PropositionalTriangularDecomposition> ptd = std::make_shared<MyDecomposition>(bounds);
+    std::shared_ptr<oc::PropositionalTriangularDecomposition> ptd = std::make_shared<MyDecomposition>(decompBounds);
     // helper method that adds an obstacle, as well as three propositions p0,p1,p2
     addObstaclesAndPropositions(ptd, obstacles, regions);
     ptd->setup();
@@ -233,7 +250,7 @@ void plan(JSON env_json)
         return isStateValid(si.get(), ptd, state);
         });
     si->setStatePropagator(propagate);
-    si->setPropagationStepSize(0.025);
+    si->setPropagationStepSize(0.02);
 
     //LTL co-safety sequencing formula: visit p2,p0 in that order
     // TODO: Try to install OMPL with SPOT
@@ -269,17 +286,11 @@ void plan(JSON env_json)
     auto pdef(std::make_shared<oc::LTLProblemDefinition>(ltlsi));
 
     // create a start state
-    // ob::ScopedState<ob::SE2StateSpace> start(space);
-    // start->setX(0.2);
-    // start->setY(0.2);
-    // start->setYaw(0.0);
     ob::ScopedState<> start(space);
-    // start->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0)->setXY(0.2, 0.2);
-    // start->as<ob::CompoundState>()->as<ob::SE2StateSpace::StateType>(0)->setYaw(0.0);
     start[0] = 0.2;
     start[1] = 0.2;
-
-    std::cout << start;
+    start[2] = 0;
+    start[3] = 0;
 
     // addLowerStartState accepts a state in lower space, expands it to its
     // corresponding hybrid state (decomposition region containing the state, and
