@@ -1,9 +1,4 @@
 function plot_env(env)
-fprintf("Plotting environment: %s\n", env.env_name);
-figure
-hold on
-grid on
-
 % Plot obstacles
 for i = 1:length(env.obstacles)
     o = env.obstacles(i);
