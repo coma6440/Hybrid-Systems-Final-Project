@@ -31,7 +31,7 @@ using JSON = nlohmann::json;
 // use TriangularDecomp
 class MyDecomposition : public oc::PropositionalTriangularDecomposition
     {
-        public:
+    public:
         MyDecomposition(const ob::RealVectorBounds& bounds)
             : oc::PropositionalTriangularDecomposition(bounds) {}
         ~MyDecomposition() override = default;
@@ -94,9 +94,7 @@ void addObstaclesAndPropositions(std::shared_ptr<oc::PropositionalTriangularDeco
         }
     }
 
-/* Returns whether a point (x,y) is within a given polygon.
-   We are assuming that the polygon is a axis-aligned rectangle, with vertices stored
-   in counter-clockwise order, beginning with the bottom-left vertex. */
+/* Returns whether a point (x,y) is within a given convex polygon. */
 bool polyContains(const Polygon& poly, double x, double y)
     {
     // Adapted from https://stackoverflow.com/questions/1119627/how-to-test-if-a-point-is-inside-of-a-convex-polygon-in-2d-integer-coordinates
@@ -147,10 +145,7 @@ bool polyContains(const Polygon& poly, double x, double y)
 /* Our state validity checker queries the decomposition for its obstacles,
    and checks for collisions against them.
    This is to prevent us from having to redefine the obstacles in multiple places. */
-bool isStateValid(
-    const oc::SpaceInformation* si,
-    const std::shared_ptr<oc::PropositionalTriangularDecomposition>& decomp,
-    const ob::State* state)
+bool isStateValid(const oc::SpaceInformation* si, const std::shared_ptr<oc::PropositionalTriangularDecomposition>& decomp, const ob::State* state)
     {
     if (!si->satisfiesBounds(state))
         {
@@ -195,7 +190,7 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
     }
 
-void plan(JSON env_json)
+void plan(JSON env_json, std::ofstream& outfile)
     {
     // Load the environment
     std::vector<Polygon> obstacles;
@@ -253,20 +248,8 @@ void plan(JSON env_json)
     si->setPropagationStepSize(0.02);
 
     //LTL co-safety sequencing formula: visit p2,p0 in that order
-    // TODO: Try to install OMPL with SPOT
-#if OMPL_HAVE_SPOT
-    // This shows off the capability to construct an automaton from LTL-cosafe formula using Spot
     auto cosafety = std::make_shared<oc::Automaton>(3, "! p0 U ((p2 & !p0) & XF p0)");
-#else
-    auto cosafety = oc::Automaton::SequenceAutomaton(3, { 2, 0 });
-#endif
-    //LTL safety avoidance formula: never visit p1
-#if OMPL_HAVE_SPOT
-    // This shows off the capability to construct an automaton from LTL-safe formula using Spot
     auto safety = std::make_shared<oc::Automaton>(3, "G ! p1", false);
-#else
-    auto safety = oc::Automaton::AvoidanceAutomaton(3, { 1 });
-#endif
 
     // construct product graph (propDecomp x A_{cosafety} x A_{safety})
     auto product(std::make_shared<oc::ProductGraph>(ptd, cosafety, safety));
@@ -308,12 +291,11 @@ void plan(JSON env_json)
 
     if (solved)
         {
-        std::cout << "Found solution:" << std::endl;
+        std::cout << "Found solution, wrote to file" << std::endl;
         // The path returned by LTLProblemDefinition is through hybrid space.
         // getLowerSolutionPath() projects it down into the original robot state space
         // that we handed to LTLSpaceInformation.
-        // TODO: Save to separate output file passed into function
-        static_cast<oc::PathControl&>(*pdef->getLowerSolutionPath()).printAsMatrix(std::cout);
+        static_cast<oc::PathControl&>(*pdef->getLowerSolutionPath()).printAsMatrix(outfile);
         }
     else
         std::cout << "No solution found" << std::endl;
@@ -321,23 +303,30 @@ void plan(JSON env_json)
 
 int main(int argc, char** argv)
     {
-    if (argc == 2)
+    // TODO: Create configuration file that stores environment path, LTL formula, solution path. Use this as the sole parameter to pass
+    if (argc == 3)
         {
-        std::ifstream file;
+        std::ifstream infile;
+        std::ofstream outfile;
         // First argument is environment file
-        file.open(argv[1]);
-        if (file.is_open())
+        infile.open(argv[1]);
+        outfile.open(argv[2]);
+        if (infile.is_open() && outfile.is_open())
             {
             JSON j;
-            file >> j;
-            file.close();
+            infile >> j;
+            infile.close();
             std::cout << "Opened environment: " << j["env_name"] << std::endl;
-            plan(j);
+            plan(j, outfile);
+            }
+        else
+            {
+            std::cout << "Failed to open input or output file" << std::endl;
             }
         }
     else
         {
-        std::cout << "Need to pass environment file" << std::endl;
+        std::cout << "Need to pass environment and output filenames" << std::endl;
         }
     // plan();
     return 0;

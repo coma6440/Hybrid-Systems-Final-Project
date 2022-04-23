@@ -1,1 +1,4 @@
 build/
+spot-2.10.4/
+ompl-1.5.2/
+install-ompl-ubuntu.sh
