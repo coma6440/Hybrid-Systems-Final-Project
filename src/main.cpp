@@ -51,8 +51,19 @@ class MyDecomposition : public oc::PropositionalTriangularDecomposition
             }
     };
 
-void loadEnv(JSON j, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
+void loadEnv(std::string fname, std::vector<Polygon>& obstacles, std::vector<Polygon>& regions)
     {
+    std::ifstream envFile;
+    envFile.open("../envs/" + fname);
+    JSON j;
+    if (envFile.is_open())
+        {
+        envFile >> j;
+        }
+    else
+        {
+        throw std::runtime_error("Unable to open environment file");
+        }
     for (auto& e : j["obstacles"])
         {
         size_t n = e["pts"].size();
@@ -190,12 +201,12 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
     }
 
-void plan(JSON env_json, std::ofstream& outfile)
+void plan(JSON config, std::ofstream& outfile)
     {
     // Load the environment
     std::vector<Polygon> obstacles;
     std::vector<Polygon> regions;
-    loadEnv(env_json, obstacles, regions);
+    loadEnv(config["env"].get<std::string>(), obstacles, regions);
 
     // construct the state space we are planning in
     auto space(std::make_shared<ob::RealVectorStateSpace>(4));
@@ -247,9 +258,10 @@ void plan(JSON env_json, std::ofstream& outfile)
     si->setStatePropagator(propagate);
     si->setPropagationStepSize(0.02);
 
+    // TODO: Pass in LTL formula as part of configuration file
     //LTL co-safety sequencing formula: visit p2,p0 in that order
-    auto cosafety = std::make_shared<oc::Automaton>(3, "! p0 U ((p2 & !p0) & XF p0)");
-    auto safety = std::make_shared<oc::Automaton>(3, "G ! p1", false);
+    auto cosafety = std::make_shared<oc::Automaton>(config["n_propositions"], config["cosafety"].get<std::string>());
+    auto safety = std::make_shared<oc::Automaton>(config["n_propositions"], config["safety"].get<std::string>(), false);
 
     // construct product graph (propDecomp x A_{cosafety} x A_{safety})
     auto product(std::make_shared<oc::ProductGraph>(ptd, cosafety, safety));
@@ -304,20 +316,26 @@ void plan(JSON env_json, std::ofstream& outfile)
 int main(int argc, char** argv)
     {
     // TODO: Create configuration file that stores environment path, LTL formula, solution path. Use this as the sole parameter to pass
-    if (argc == 3)
+    if (argc == 2)
         {
-        std::ifstream infile;
-        std::ofstream outfile;
+        std::ifstream configFile;
         // First argument is environment file
-        infile.open(argv[1]);
-        outfile.open(argv[2]);
-        if (infile.is_open() && outfile.is_open())
+        configFile.open(argv[1]);
+        // outfile.open("test.txt");
+        if (configFile.is_open())
             {
-            JSON j;
-            infile >> j;
-            infile.close();
-            std::cout << "Opened environment: " << j["env_name"] << std::endl;
-            plan(j, outfile);
+            JSON jConfigFile;
+            configFile >> jConfigFile;
+            configFile.close();
+
+            std::ofstream outFile;
+            outFile.open("../sols/" + jConfigFile["sol"].get<std::string>());
+            if (!outFile.is_open())
+                {
+                throw std::runtime_error("Unable to open solution file");
+                }
+
+            plan(jConfigFile, outFile);
             }
         else
             {

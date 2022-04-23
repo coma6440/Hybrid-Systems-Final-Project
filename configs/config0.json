@@ -1,0 +1,7 @@
+{
+    "env": "env0.json",
+    "sol": "sol_env1.txt",
+    "n_propositions": 3,
+    "cosafety": "! p1 U ((p2 & !p1) & XF p1)",
+    "safety": "G ! p0"
+}
