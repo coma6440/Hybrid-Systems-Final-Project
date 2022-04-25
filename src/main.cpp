@@ -17,11 +17,14 @@
 #include <ompl/control/planners/ltl/LTLPlanner.h>
 #include <ompl/control/planners/ltl/LTLProblemDefinition.h>
 
+#include <ompl/tools/benchmark/Benchmark.h>
+
 /* Additional Libraries */
 #include <json.hpp>
 
 namespace ob = ompl::base;
 namespace oc = ompl::control;
+namespace ot = ompl::tools;
 
 using Polygon = oc::PropositionalTriangularDecomposition::Polygon;
 using Vertex = oc::PropositionalTriangularDecomposition::Vertex;
@@ -31,7 +34,7 @@ using JSON = nlohmann::json;
 // use TriangularDecomp
 class MyDecomposition : public oc::PropositionalTriangularDecomposition
     {
-    public:
+        public:
         MyDecomposition(const ob::RealVectorBounds& bounds)
             : oc::PropositionalTriangularDecomposition(bounds) {}
         ~MyDecomposition() override = default;
@@ -300,6 +303,9 @@ void plan(JSON config, std::ofstream& outfile)
     // considering the above cosafety/safety automata, a solution path is any
     // path that visits p2 followed by p0 while avoiding obstacles and avoiding p1.
     ob::PlannerStatus solved = ltlPlanner.ob::Planner::solve(30.0);
+    // This can be used to reset the planner
+    // ltlPlanner.ob::Planner::clear();
+    // solved = ltlPlanner.ob::Planner::solve(30.0);
 
     if (solved)
         {
