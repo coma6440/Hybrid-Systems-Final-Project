@@ -204,8 +204,17 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
     }
 
-void plan(JSON config, std::ofstream& outfile)
+void plan(JSON config)
     {
+    std::ofstream pathFile;
+    std::ofstream decompFile;
+    pathFile.open("../sols/" + config["sol"].get<std::string>());
+    decompFile.open("../envs/" + config["decomp"].get<std::string>());
+    if (!pathFile.is_open() || !decompFile.is_open())
+        {
+        throw std::runtime_error("Unable to open solution or decomposition file");
+        }
+
     // Load the environment
     std::vector<Polygon> obstacles;
     std::vector<Polygon> regions;
@@ -241,6 +250,10 @@ void plan(JSON config, std::ofstream& outfile)
     // helper method that adds an obstacle, as well as three propositions p0,p1,p2
     addObstaclesAndPropositions(ptd, obstacles, regions);
     ptd->setup();
+
+    // Save the decomposition
+    ptd->print(decompFile);
+    printf("Wrote decomposition to file\n");
 
     // create a control space
     auto cspace(std::make_shared<oc::RealVectorControlSpace>(space, 2));
@@ -313,7 +326,8 @@ void plan(JSON config, std::ofstream& outfile)
         // The path returned by LTLProblemDefinition is through hybrid space.
         // getLowerSolutionPath() projects it down into the original robot state space
         // that we handed to LTLSpaceInformation.
-        static_cast<oc::PathControl&>(*pdef->getLowerSolutionPath()).printAsMatrix(outfile);
+        auto path = static_cast<oc::PathControl&>(*pdef->getLowerSolutionPath());
+        path.printAsMatrix(pathFile);
         }
     else
         std::cout << "No solution found" << std::endl;
@@ -334,18 +348,11 @@ int main(int argc, char** argv)
             configFile >> jConfigFile;
             configFile.close();
 
-            std::ofstream outFile;
-            outFile.open("../sols/" + jConfigFile["sol"].get<std::string>());
-            if (!outFile.is_open())
-                {
-                throw std::runtime_error("Unable to open solution file");
-                }
-
-            plan(jConfigFile, outFile);
+            plan(jConfigFile);
             }
         else
             {
-            std::cout << "Failed to open input or output file" << std::endl;
+            std::cout << "Failed to open configuration" << std::endl;
             }
         }
     else
