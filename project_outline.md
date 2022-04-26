@@ -4,8 +4,9 @@
 ## Problem Setup
 - Robot model
 - Unicycle dynamics
-- Environment definition (buffers)
+- Environment definition (buffers/point mass assumption)
 ## Background
+- LTL specifications (cosafe vs safe)
 - Delauney triangulation
 - Product Graph (decomposition, co-safe, safe)
 - Output-input feedback linearization
@@ -18,5 +19,8 @@
 - Number of propositions in triangular decomposition
 - Visualize decompositions
 - Visualize solution paths
-- Benchmark results?
+- Solution statistics for 10? runs of each
 ## Conclusion
+- Summary of results
+- Lessons learned
+- Future work
