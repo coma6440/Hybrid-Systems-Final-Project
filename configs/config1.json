@@ -1,0 +1,9 @@
+{
+    "env": "env1.json",
+    "decomp": "env1_decomp.txt",
+    "sol": "sol_env1.txt",
+    "n_propositions": 4,
+    "cosafety": "! p3 U ((p1 & !p3) & XF p3)",
+    "safety": " G (p3 -> F p0)",
+    "benchmark": false
+}
