@@ -321,6 +321,8 @@ void plan(JSON config)
     start[2] = 0;
     start[3] = 0;
 
+    std::cout << start << std::endl;
+
     // addLowerStartState accepts a state in lower space, expands it to its
     // corresponding hybrid state (decomposition region containing the state, and
     // starting states in both automata), and adds that as an official start state.

@@ -1,10 +1,10 @@
 {
     "env": "env2.json",
     "decomp": "env2_decomp.txt",
-    "sol": "config2",
+    "sol": "config3",
     "n_propositions": 11,
     "cosafety": "F(p0 & F(p1 & F(p2 & F(p3 & F(p4 & F p5)))))",
-    "safety": "",
+    "safety": "G (!p6 & !p7 & !p8 & !p9 & ! p10)",
     "step_size": 0.1,
     "solve_time": 60,
     "xbounds": [

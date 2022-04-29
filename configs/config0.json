@@ -1,7 +1,7 @@
 {
     "env": "env0.json",
     "decomp": "env0_decomp.txt",
-    "sol": "sol_env0",
+    "sol": "config0",
     "n_propositions": 3,
     "cosafety": "! p1 U ((p2 & !p1) & XF p1)",
     "safety": "G ! p0",

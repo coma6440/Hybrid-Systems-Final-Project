@@ -4,7 +4,7 @@ clear
 clc
 
 %% Load the Configuration file
-c = load_json("../configs/config1.json");
+c = load_json("../configs/config2.json");
 env = load_json("../envs/" + c.env);
 sol_file = "../sols/" + c.sol + ".txt";
 decomp_file = "../envs/" + c.decomp;
