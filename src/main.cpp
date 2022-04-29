@@ -226,14 +226,13 @@ void plan(JSON config)
     // set the bounds for the state space
     ob::RealVectorBounds bounds(4);
     // Lower Bounds
-    // TODO: Parse bounds from config file
-    bounds.setLow(0, 0);  // x 
-    bounds.setLow(1, 0);  // y
+    bounds.setLow(0, config["xbounds"][0]);  // x 
+    bounds.setLow(1, config["ybounds"][0]);  // y
     bounds.setLow(2, -1); // vx
     bounds.setLow(3, -1); // vy
     // Upper Bounds
-    bounds.setHigh(0, 10); // x
-    bounds.setHigh(1, 10); // y
+    bounds.setHigh(0, config["xbounds"][1]); // x
+    bounds.setHigh(1, config["ybounds"][1]); // y
     bounds.setHigh(2, 1); // vx
     bounds.setHigh(3, 1); // vy
 
@@ -272,7 +271,7 @@ void plan(JSON config)
         return isStateValid(si.get(), ptd, state);
         });
     si->setStatePropagator(propagate);
-    si->setPropagationStepSize(0.1);
+    si->setPropagationStepSize(config["step_size"]); //This is causing seg faults sometimes?
 
     //LTL co-safety sequencing formula: visit p2,p0 in that order
     auto cosafety = std::make_shared<oc::Automaton>(config["n_propositions"], config["cosafety"].get<std::string>());
@@ -316,7 +315,7 @@ void plan(JSON config)
     // attempt to solve the problem within thirty seconds of planning time
     // considering the above cosafety/safety automata, a solution path is any
     // path that visits p2 followed by p0 while avoiding obstacles and avoiding p1.
-    ob::PlannerStatus solved = ltlPlanner.ob::Planner::solve(60.0);
+    ob::PlannerStatus solved = ltlPlanner.ob::Planner::solve(config["solve_time"]);
     // This can be used to reset the planner
     // ltlPlanner.ob::Planner::clear();
     // solved = ltlPlanner.ob::Planner::solve(30.0);
