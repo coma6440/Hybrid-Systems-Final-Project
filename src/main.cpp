@@ -273,14 +273,16 @@ void plan(JSON config)
     si->setStatePropagator(propagate);
     si->setPropagationStepSize(config["step_size"]); //This is causing seg faults sometimes?
 
-    //LTL co-safety sequencing formula: visit p2,p0 in that order
+    // Safety in configuration can be empty
+    bool hasSafety = !config["safety"].get<std::string>().empty();
+    // Cosafety always contains information to make an automaton
     auto cosafety = std::make_shared<oc::Automaton>(config["n_propositions"], config["cosafety"].get<std::string>());
-    // TODO: Add option to turn off safety
-    auto safety = std::make_shared<oc::Automaton>(config["n_propositions"], config["safety"].get<std::string>(), false);
+    // Set safety to nullptr if hasSafety is false
+    std::shared_ptr<oc::Automaton> safety = hasSafety ? std::make_shared<oc::Automaton>(config["n_propositions"], config["safety"].get<std::string>(), false) : nullptr;
+    // construct product graph (propDecomp x A_{cosafety} x A_{safety})
+    std::shared_ptr<oc::ProductGraph> product = hasSafety ? std::make_shared<oc::ProductGraph>(ptd, cosafety, safety) : std::make_shared<oc::ProductGraph>(ptd, cosafety);
 
     // TODO: Save out resulting automaton graphs
-    // construct product graph (propDecomp x A_{cosafety} x A_{safety})
-    auto product(std::make_shared<oc::ProductGraph>(ptd, cosafety, safety));
 
     // LTLSpaceInformation creates a hybrid space of robot state space x product graph.
     // It takes the validity checker from SpaceInformation and expands it to one that also

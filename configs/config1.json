@@ -4,7 +4,7 @@
     "sol": "sol_env1.txt",
     "n_propositions": 4,
     "cosafety": "! p3 U ((p1 & !p3) & XF p3) & G (p3 -> F p0)",
-    "safety": "G ! p2",
+    "safety": "",
     "step_size": 0.1,
     "solve_time": 60,
     "xbounds": [
