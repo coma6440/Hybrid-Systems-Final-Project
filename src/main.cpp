@@ -276,6 +276,7 @@ void plan(JSON config)
 
     //LTL co-safety sequencing formula: visit p2,p0 in that order
     auto cosafety = std::make_shared<oc::Automaton>(config["n_propositions"], config["cosafety"].get<std::string>());
+    // TODO: Add option to turn off safety
     auto safety = std::make_shared<oc::Automaton>(config["n_propositions"], config["safety"].get<std::string>(), false);
 
     // TODO: Save out resulting automaton graphs
@@ -298,6 +299,7 @@ void plan(JSON config)
 
     // create a start state
     ob::ScopedState<> start(space);
+    // TODO: Add start state to config file
     start[0] = 0.2;
     start[1] = 0.2;
     start[2] = 0;
