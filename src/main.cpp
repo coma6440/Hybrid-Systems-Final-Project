@@ -34,7 +34,7 @@ using JSON = nlohmann::json;
 // use TriangularDecomp
 class MyDecomposition : public oc::PropositionalTriangularDecomposition
     {
-    public:
+        public:
         MyDecomposition(const ob::RealVectorBounds& bounds)
             : oc::PropositionalTriangularDecomposition(bounds) {}
         ~MyDecomposition() override = default;
@@ -299,9 +299,8 @@ void plan(JSON config)
 
     // create a start state
     ob::ScopedState<> start(space);
-    // TODO: Add start state to config file
-    start[0] = 0.2;
-    start[1] = 0.2;
+    start[0] = config["start"][0];
+    start[1] = config["start"][1];
     start[2] = 0;
     start[3] = 0;
 

@@ -5,5 +5,17 @@
     "n_propositions": 3,
     "cosafety": "! p1 U ((p2 & !p1) & XF p1)",
     "safety": "G ! p0",
-    "benchmark": false
+    "benchmark": false,
+    "xbounds": [
+        0,
+        2
+    ],
+    "ybounds": [
+        0,
+        2
+    ],
+    "start": [
+        0.2,
+        0.2
+    ]
 }
