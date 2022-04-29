@@ -204,11 +204,26 @@ void propagate(const ob::State* start, const oc::Control* control, const double 
     result->as<ob::RealVectorStateSpace::StateType>()->values[3] = vyout;
     }
 
+void saveAutomaton(JSON config, std::shared_ptr<oc::Automaton>& cosafety, std::shared_ptr<oc::Automaton>& safety)
+    {
+    std::ofstream csFile;
+    csFile.open("../sols/" + config["sol"].get<std::string>() + "_cosafety.dot");
+    cosafety.get()->print(csFile);
+    csFile.close();
+    if (safety != nullptr)
+        {
+        std::ofstream sFile;
+        sFile.open("../sols/" + config["sol"].get<std::string>() + "_safety.dot");
+        safety.get()->print(sFile);
+        sFile.close();
+        }
+    }
+
 void plan(JSON config)
     {
     std::ofstream pathFile;
     std::ofstream decompFile;
-    pathFile.open("../sols/" + config["sol"].get<std::string>());
+    pathFile.open("../sols/" + config["sol"].get<std::string>() + ".txt");
     decompFile.open("../envs/" + config["decomp"].get<std::string>());
     if (!pathFile.is_open() || !decompFile.is_open())
         {
@@ -283,7 +298,7 @@ void plan(JSON config)
     std::shared_ptr<oc::ProductGraph> product = hasSafety ? std::make_shared<oc::ProductGraph>(ptd, cosafety, safety) : std::make_shared<oc::ProductGraph>(ptd, cosafety);
 
     // TODO: Save out resulting automaton graphs
-
+    saveAutomaton(config, cosafety, safety);
     // LTLSpaceInformation creates a hybrid space of robot state space x product graph.
     // It takes the validity checker from SpaceInformation and expands it to one that also
     // rejects any hybrid state containing rejecting automaton states.
