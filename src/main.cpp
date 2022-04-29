@@ -296,9 +296,10 @@ void plan(JSON config)
     std::shared_ptr<oc::Automaton> safety = hasSafety ? std::make_shared<oc::Automaton>(config["n_propositions"], config["safety"].get<std::string>(), false) : nullptr;
     // construct product graph (propDecomp x A_{cosafety} x A_{safety})
     std::shared_ptr<oc::ProductGraph> product = hasSafety ? std::make_shared<oc::ProductGraph>(ptd, cosafety, safety) : std::make_shared<oc::ProductGraph>(ptd, cosafety);
-
-    // TODO: Save out resulting automaton graphs
+    // Save out resulting automaton graphs
     saveAutomaton(config, cosafety, safety);
+
+
     // LTLSpaceInformation creates a hybrid space of robot state space x product graph.
     // It takes the validity checker from SpaceInformation and expands it to one that also
     // rejects any hybrid state containing rejecting automaton states.
@@ -352,13 +353,11 @@ void plan(JSON config)
 
 int main(int argc, char** argv)
     {
-    // TODO: Create configuration file that stores environment path, LTL formula, solution path. Use this as the sole parameter to pass
     if (argc == 2)
         {
         std::ifstream configFile;
-        // First argument is environment file
+        // Argument is configuration file
         configFile.open(argv[1]);
-        // outfile.open("test.txt");
         if (configFile.is_open())
             {
             JSON jConfigFile;

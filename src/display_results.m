@@ -6,7 +6,7 @@ clc
 %% Load the Configuration file
 c = load_json("../configs/config1.json");
 env = load_json("../envs/" + c.env);
-sol_file = "../sols/" + c.sol;
+sol_file = "../sols/" + c.sol + ".txt";
 decomp_file = "../envs/" + c.decomp;
 if isfile(sol_file)
     decomp = load_decomp(decomp_file);
